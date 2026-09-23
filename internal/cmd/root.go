@@ -68,10 +68,10 @@ func newRoot() *cobra.Command {
 	}
 	flags := root.PersistentFlags()
 	flags.StringVar(&cfg.BaseURL, "base-url", envOr("QURAN_BASE_URL", defaultBaseURL), "audio host ($QURAN_BASE_URL)")
-	flags.StringVarP(&cfg.Reciter, "reciter", "r", envOr("QURAN_RECITER", defaultReciter), "reciter slug, see `quran reciters` ($QURAN_RECITER)")
-	flags.StringVarP(&cfg.Translation, "translation", "t", envOr("QURAN_TRANSLATION", defaultTranslation), "translation id, see `quran translations` ($QURAN_TRANSLATION)")
-	flags.StringVar(&cfg.Arabic, "arabic", envOr("QURAN_ARABIC", string(render.Auto)), "arabic rendering: visual (shaped for any terminal), native (bidi terminals) or auto ($QURAN_ARABIC)")
-	flags.StringVar(&cfg.CacheDir, "cache-dir", envOr("QURAN_CACHE_DIR", defaultCacheDir()), "where played ayahs are cached; empty disables ($QURAN_CACHE_DIR)")
+	flags.StringVarP(&cfg.Reciter, "reciter", "r", envOr("QURAN_RECITER", defaultReciter), "reciter slug ($QURAN_RECITER)")
+	flags.StringVarP(&cfg.Translation, "translation", "t", envOr("QURAN_TRANSLATION", defaultTranslation), "translation id ($QURAN_TRANSLATION)")
+	flags.StringVar(&cfg.Arabic, "arabic", envOr("QURAN_ARABIC", string(render.Auto)), "visual, native or auto ($QURAN_ARABIC)")
+	flags.StringVar(&cfg.CacheDir, "cache-dir", envOr("QURAN_CACHE_DIR", defaultCacheDir()), "ayah cache, empty disables ($QURAN_CACHE_DIR)")
 	root.AddCommand(
 		newPlayCommand(cfg),
 		newReadCommand(cfg),
@@ -84,5 +84,5 @@ func newRoot() *cobra.Command {
 }
 
 func Execute(ctx context.Context) error {
-	return fang.Execute(ctx, newRoot(), fang.WithVersion(version))
+	return fang.Execute(ctx, newRoot(), fang.WithVersion(version), fang.WithColorSchemeFunc(colorScheme))
 }
