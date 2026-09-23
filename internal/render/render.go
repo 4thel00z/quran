@@ -40,7 +40,28 @@ func detectMode() Mode {
 	if os.Getenv("TERM_PROGRAM") == "Apple_Terminal" || os.Getenv("KONSOLE_VERSION") != "" || os.Getenv("VTE_VERSION") != "" {
 		return Native
 	}
+	if os.Getenv("TERM_PROGRAM") == "iTerm.app" && versionAtLeast(os.Getenv("TERM_PROGRAM_VERSION"), 3, 6) {
+		return Native
+	}
 	return Visual
+}
+
+// versionAtLeast compares the major.minor prefix of a dotted version.
+func versionAtLeast(version string, major int, minor int) bool {
+	var gotMajor, gotMinor int
+	if _, err := fmt.Sscanf(version, "%d.%d", &gotMajor, &gotMinor); err != nil {
+		return false
+	}
+	return gotMajor > major || gotMajor == major && gotMinor >= minor
+}
+
+// isolationMark is U+200E LEFT-TO-RIGHT MARK. Wrapping each right-to-left
+// run in it stops a bidi terminal from pulling neighbouring box-drawing
+// characters, padding or other columns into the run.
+const isolationMark = "\u200E"
+
+func isolate(text string) string {
+	return isolationMark + text + isolationMark
 }
 
 func (m Mode) Toggle() Mode {
@@ -50,8 +71,16 @@ func (m Mode) Toggle() Mode {
 	return Visual
 }
 
-// Word prepares one right-to-left word for display.
-func (m Mode) Word(word string) string {
+// Word prepares a right-to-left word or phrase that sits inside a
+// left-to-right line.
+func (m Mode) Word(text string) string {
+	if m == Native {
+		return isolate(text)
+	}
+	return arabic.Visual(text)
+}
+
+func (m Mode) shape(word string) string {
 	if m == Native {
 		return word
 	}
@@ -83,7 +112,7 @@ func RTLLines(words []string, width int, mode Mode, style func(i int) lipgloss.S
 	current := []cell{}
 	used := 0
 	for i, word := range words {
-		shown := mode.Word(word)
+		shown := mode.shape(word)
 		w := ansi.StringWidth(shown)
 		if len(current) > 0 && used+1+w > width {
 			lines = append(lines, current)
@@ -110,7 +139,11 @@ func RTLLines(words []string, width int, mode Mode, style func(i int) lipgloss.S
 			lineWidth += c.width
 		}
 		filler := pad.Render(strings.Repeat(" ", max(0, width-lineWidth)))
-		result = append(result, filler+strings.Join(parts, pad.Render(" ")))
+		text := strings.Join(parts, pad.Render(" "))
+		if mode == Native {
+			text = isolate(text)
+		}
+		result = append(result, filler+text)
 	}
 	return result
 }

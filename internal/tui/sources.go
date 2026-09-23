@@ -5,7 +5,6 @@ import (
 	"strings"
 
 	"github.com/4thel00z/quran/internal/quran"
-	"github.com/4thel00z/quran/internal/render"
 )
 
 const searchLimit = 200
@@ -89,16 +88,7 @@ func (m *Model) snippet(text string, rtl bool) string {
 		return text
 	}
 	words := strings.Fields(text)
-	words = words[:min(len(words), 8)]
-	for i, w := range words {
-		words[i] = m.mode.Word(w)
-	}
-	if m.mode == render.Visual {
-		for i, j := 0, len(words)-1; i < j; i, j = i+1, j-1 {
-			words[i], words[j] = words[j], words[i]
-		}
-	}
-	return strings.Join(words, " ")
+	return m.mode.Word(strings.Join(words[:min(len(words), 8)], " "))
 }
 
 func (m *Model) reciterItems(query string) []pickerItem {

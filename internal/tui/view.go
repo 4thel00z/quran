@@ -215,7 +215,7 @@ func (m *Model) bannerBlock() []string {
 	ornament := s.marker.Render("۞")
 	lines := []string{
 		"",
-		center.Render(s.bannerArabic.Render(m.mode.Word("سورة")+" "+m.mode.Word(surah.NameArabic))),
+		center.Render(s.bannerArabic.Render(m.mode.Word("سورة "+surah.NameArabic))),
 		center.Render(s.subtitle.Render(surah.NameEnglish) + s.muted.Render(" · "+surah.NameMeaning)),
 		center.Render(s.faint.Render(fmt.Sprintf("%s · %d ayahs · revealed #%d", surah.Revelation, surah.AyahCount, surah.RevelationOrder))),
 		center.Render(s.faint.Render(strings.Repeat("─", 12)) + " " + ornament + " " + s.faint.Render(strings.Repeat("─", 12))),
