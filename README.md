@@ -1,73 +1,141 @@
-# quran
+<div align="center">
 
-Read and listen to the Quran in the terminal. The reader shows the Uthmani text with a translation, recites ayah by ayah and highlights the word being recited.
+# ۞ quran
 
-Built with [Bubble Tea](https://github.com/charmbracelet/bubbletea), [Lip Gloss](https://github.com/charmbracelet/lipgloss), [Fang](https://github.com/charmbracelet/fang) and [Cobra](https://github.com/spf13/cobra). Audio plays through [beep](https://github.com/gopxl/beep), no cgo needed.
+**Read and listen to the Quran in your terminal.**
+Twelve reciters, word-by-word highlighting, 35 translations, one static binary.
+
+[![Go](https://img.shields.io/badge/go-1.26-4FB08A?style=flat-square&logo=go&logoColor=white)](go.mod)
+[![Charm](https://img.shields.io/badge/built%20with-Bubble%20Tea%20·%20Lip%20Gloss%20·%20Fang-E7BE62?style=flat-square)](https://charm.land)
+[![Audio](https://img.shields.io/badge/audio-quran.host-1D2B25?style=flat-square)](https://quran.host)
+[![Data](https://img.shields.io/badge/text-Tarteel%20quran--assets-3E6B5A?style=flat-square)](https://github.com/TarteelAI/quran-assets)
+
+<img src="docs/img/demo.gif" alt="Surah Ya-Sin recited by Minshawi, words highlighted as they are recited" width="900">
+
+[quran.host](https://quran.host) · [Install](#install) · [Usage](#usage) · [Keys](#keys) · [How it works](#how-it-works)
+
+</div>
+
+---
+
+## Features
+
+- 🎧 **Ayah-by-ayah recitation** with the current word highlighted in gold, basmala before every surah opener, autoplay across surahs, and repeat by ayah or by range.
+- 🕌 **12 reciters**: Minshawi (murattal, mujawwad), Husary (murattal, muallim), Alafasy, AbdulBaset (murattal, mujawwad), Sudais, Shatri, Rifai, Shuraym and Tablawi. All of them have word timings.
+- 🌍 **35 translations** across 26 languages, including a transliteration and two Arabic tafsirs, embedded in the binary. Switch while reading.
+- 🔎 **One search box** for `2:255`, `2:255-257`, `juz 30`, `hizb 5`, `page 604`, `kahf`, `الكهف`, or any words in the translation or the Arabic text.
+- 🔤 **Readable Arabic in any terminal**: letters are shaped and reordered for terminals without bidi, and each run is wrapped in left-to-right marks for terminals that have it (iTerm2 3.6+, Terminal.app, Konsole, GNOME Terminal).
+- 📦 **No runtime dependencies**: pure Go, no cgo. Text and timings are compiled in; audio streams from [quran.host](https://quran.host) and is cached after the first play.
+
+## Screenshots
+
+<table>
+  <tr>
+    <td width="50%"><img src="docs/img/tui-reader.png" alt="Reader with Ya-Sin playing"><br><sub><b>Reader</b>: sidebar, surah banner, recited word highlighted</sub></td>
+    <td width="50%"><img src="docs/img/tui-search.png" alt="Search overlay"><br><sub><b>Search</b>: references, surah names and full text</sub></td>
+  </tr>
+  <tr>
+    <td><img src="docs/img/tui-reciters.png" alt="Reciter picker over Juz 30"><br><sub><b>Reciters</b>: switch mid-recitation; juz 30 bounds the playback range</sub></td>
+    <td><img src="docs/img/tui-help.png" alt="Key help with the German translation"><br><sub><b>Keys</b>: with the Bubenheim German translation</sub></td>
+  </tr>
+</table>
+
+## Install
 
 ```sh
-make build            # bin/quran
-./bin/quran           # open the reader at Al-Fatihah
-./bin/quran 18        # Al-Kahf
-./bin/quran play 2:255 -r husary
-./bin/quran play juz 30 --no-tui
-./bin/quran read 1 -t de-bubenheim
-./bin/quran search patience prayer
-./bin/quran search الحي القيوم
-./bin/quran reciters
-./bin/quran translations
+go install github.com/4thel00z/quran@latest
 ```
 
-References work everywhere a position is taken, in the CLI and in the `/` search box: `18`, `2:255`, `2:255-257`, `juz 30` (`j30`), `hizb 5` (`h5`), `page 604` (`p604`), or a surah name (`kahf`, `Al-Kahf`, `الكهف`). Any other text searches the translation, or the Arabic text if the query is Arabic (diacritics and alef/ya/ta-marbuta variants are ignored).
+or from a checkout:
 
-## Keys
+```sh
+git clone https://github.com/4thel00z/quran && cd quran
+make build   # → bin/quran
+```
 
-| Key | Action |
-|---|---|
-| `space` | play / pause |
-| `enter` | play the ayah under the cursor |
-| `n` / `p` | next / previous ayah |
-| `s` | stop |
-| `c` | move the cursor to the ayah being recited |
-| `r` | repeat: off, ayah, range (the surah, or the juz/hizb/page/range you jumped to) |
-| `a` | autoplay the next ayah |
-| `+` / `-` | volume |
-| `j` / `k`, `h` / `l` | next / previous ayah, previous / next surah |
-| `g` / `G` | first / last ayah |
-| `tab` | surah list |
-| `/` | search |
-| `R` / `T` | pick reciter / translation |
-| `t` / `b` | toggle translation / sidebar |
-| `A` | Arabic rendering: visual ↔ native |
-| `?` | help |
+## Usage
 
-Playing the first ayah of a surah recites the basmala first (except for Al-Fatihah and At-Tawbah).
+```sh
+quran                                  # open the reader at Al-Fatihah
+quran 18                               # Al-Kahf
+quran play 36                          # open Ya-Sin and start reciting
+quran play 2:255 -r husary             # Ayat al-Kursi by Husary
+quran play juz 30 --no-tui             # recite juz 30, printing each ayah
+quran read 1 -t de-bubenheim           # print Al-Fatihah with a translation
+quran search patience prayer           # every word must appear
+quran search الحي القيوم                 # Arabic queries ignore diacritics
+quran reciters && quran translations
+```
 
-## Options
+<p align="center"><img src="docs/img/cli-help.png" alt="quran --help" width="900"></p>
+
+<table>
+  <tr>
+    <td width="50%"><img src="docs/img/cli-reciters.png" alt="quran reciters"></td>
+    <td width="50%"><img src="docs/img/cli-search.png" alt="quran search patience prayer"></td>
+  </tr>
+</table>
+
+### Options
 
 | Flag | Env | Default |
 |---|---|---|
 | `-r, --reciter` | `QURAN_RECITER` | `minshawi-murattal` |
 | `-t, --translation` | `QURAN_TRANSLATION` | `en-sahih` |
-| `--arabic` | `QURAN_ARABIC` | `auto` |
+| `--arabic` | `QURAN_ARABIC` | `auto` (`visual` or `native`) |
 | `--base-url` | `QURAN_BASE_URL` | `https://quran.host` |
-| `--cache-dir` | `QURAN_CACHE_DIR` | `$XDG_CACHE_HOME/quran` (`~/Library/Caches/quran` on macOS) |
+| `--cache-dir` | `QURAN_CACHE_DIR` | the OS cache dir + `/quran` |
 
-Most terminals (iTerm2, Ghostty, kitty, Alacritty, WezTerm by default) neither shape Arabic nor lay it out right to left. `--arabic visual` replaces letters with their contextual presentation forms and reorders each line, which reads correctly in any of them. `--arabic native` writes plain logical text for terminals that implement bidi (Terminal.app, Konsole, GNOME Terminal); `auto` picks native for those three.
+If Arabic looks mirrored or its words are scrambled, your terminal applies bidi itself: use `--arabic native`. If its letters are unjoined or in the wrong order, use `--arabic visual`. Press `A` in the reader to toggle.
 
-## Reciters
+## Keys
 
-Minshawi (murattal, mujawwad), Husary (murattal, muallim), Alafasy, AbdulBaset (murattal, mujawwad), Sudais, Shatri, Rifai, Shuraym and Tablawi. Every one has word-level timings, so highlighting works for all of them.
+| | Playback | | Navigation |
+|---|---|---|---|
+| `space` | play / pause | `j` `k` | next / previous ayah |
+| `enter` | play the ayah under the cursor | `h` `l` | previous / next surah |
+| `n` `p` | next / previous ayah | `g` `G` | first / last ayah |
+| `s` | stop | `tab` | surah list |
+| `c` | jump to the ayah being recited | `/` | search |
+| `r` | repeat: off · ayah · range | `R` `T` | reciter / translation |
+| `a` | autoplay | `t` `b` | toggle translation / sidebar |
+| `+` `-` | volume | `A` | Arabic: visual ↔ native |
 
-## Data
+## How it works
 
-`internal/assets/data` is generated by `make assets ASSETS=<path to a TarteelAI/quran-assets checkout>` and embedded in the binary:
+```
+TarteelAI/quran-assets ──┐
+quran.com word timings ──┼─ tools/gen ─▶ internal/assets/data/*.json.gz ─▶ go:embed
+                         │
+verses.quran.com, ───────┴─ quran mirror ─▶ deploy/mirror.sh ─▶ quran.host/audio/<reciter>/SSSAAA.mp3
+everyayah mirror
+```
 
-- text, surah, juz, hizb and page metadata from [TarteelAI/quran-assets](https://github.com/TarteelAI/quran-assets) (Tanzil text, CC BY 3.0);
-- 35 of its Tanzil translations; see [tanzil.net/trans](https://tanzil.net/trans/) for each translation's terms;
-- word timings: Tarteel's `alafasy-ayah-manifest.json` for Alafasy, the quran.com API for the other reciters, which is where Tarteel's manifest came from.
+| Package | Role |
+|---|---|
+| `internal/quran` | data model, reference resolver, search |
+| `internal/assets` | embedded text, translations and timings |
+| `internal/arabic` | contextual shaping, lam-alef ligatures, visual reordering |
+| `internal/render` | right-to-left line layout for both modes |
+| `internal/audio` | fetch + cache, playback through [beep](https://github.com/gopxl/beep) |
+| `internal/tui` | the [Bubble Tea](https://github.com/charmbracelet/bubbletea) reader |
+| `internal/cmd` | [Cobra](https://github.com/spf13/cobra) commands run through [Fang](https://github.com/charmbracelet/fang) |
 
-## Audio hosting
+Word timings are `[firstWord, lastWord, startMs, endMs]` per ayah. The reader polls the player every 50 ms and highlights the word whose interval contains the audible position. Tests check that every reciter's timings index into the embedded words.
 
-The binary contains no audio. It fetches `https://quran.host/audio/<reciter>/<SSSAAA>.mp3` and caches each ayah after it plays. The files are copies of the recordings the timings were measured on (verses.quran.com and the everyayah mirror).
+### Hosting the audio
 
-On the server, Caddy serves `/home/httpserver/private/quran.host/www` (block in `deploy/Caddyfile`). `make mirror` prints every source URL with its hosted path (`quran mirror --all`) and runs `deploy/mirror.sh` there, which downloads with 8 parallel curls and skips files that already exist, so it can be rerun safely.
+`quran.host` is plain Caddy over a directory (`deploy/Caddyfile`). `make mirror` prints every upstream URL with its hosted path and runs `deploy/mirror.sh` on the server: 8 parallel curls, skipping files that already exist, so reruns are safe. All 12 reciters are 74,832 files.
+
+```sh
+make assets ASSETS=../quran-assets   # regenerate embedded data
+make test
+make mirror SERVER=you@host WEBROOT=path/to/site
+```
+
+## Credits
+
+- Text, metadata and Alafasy timings: [TarteelAI/quran-assets](https://github.com/TarteelAI/quran-assets) and the [Quranic Universal Library](https://qul.tarteel.ai). The Quran text comes from Tanzil (CC BY 3.0).
+- Translations: [Tanzil](https://tanzil.net/trans/); each translation has its own terms.
+- Word timings for the other reciters: [quran.com API](https://api-docs.quran.com).
+- Recordings: [verses.quran.com](https://quran.com) and [everyayah](https://everyayah.com), mirrored on quran.host.
