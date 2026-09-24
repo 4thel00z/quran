@@ -36,7 +36,7 @@ func (m *Model) View() tea.View {
 	}
 	screen := lipgloss.JoinVertical(lipgloss.Left, m.headerView(), body, m.footerView())
 	if m.overlay != nil {
-		screen = m.withOverlay(screen, m.overlay.view(m.styles, min(84, m.width-4)))
+		screen = m.withOverlay(screen, m.overlay.view(m.styles, min(84, m.readerWidth()-4)))
 	}
 	if m.showHelp {
 		screen = m.withOverlay(screen, m.helpView())
@@ -45,8 +45,10 @@ func (m *Model) View() tea.View {
 	return v
 }
 
+// withOverlay centers box over the reader, never over the sidebar divider.
 func (m *Model) withOverlay(screen string, box string) string {
-	x := max(0, (m.width-lipgloss.Width(box))/2)
+	left := m.width - m.readerWidth()
+	x := left + max(0, (m.readerWidth()-lipgloss.Width(box))/2)
 	y := max(0, (m.height-lipgloss.Height(box))/3)
 	return lipgloss.NewCompositor(
 		lipgloss.NewLayer(screen),
@@ -128,7 +130,8 @@ func (m *Model) sidebarView() string {
 	for len(lines) < rows {
 		lines = append(lines, "")
 	}
-	return s.sidebar.Width(sidebarWidth).Height(rows).Render(strings.Join(lines, "\n"))
+	divider := lipgloss.Border{Right: m.mode.Divider()}
+	return s.sidebar.Border(divider, false, true, false, false).Width(sidebarWidth).Height(rows).Render(strings.Join(lines, "\n"))
 }
 
 func (m *Model) readerView() string {

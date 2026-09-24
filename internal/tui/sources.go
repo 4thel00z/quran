@@ -64,7 +64,7 @@ func (m *Model) surahItems(surahs []quran.Surah) []pickerItem {
 		}
 		items = append(items, pickerItem{
 			title:  fmt.Sprintf("%3d. %s", s.Number, s.NameEnglish),
-			detail: fmt.Sprintf("%s · %d · %s", s.NameMeaning, s.AyahCount, m.mode.Word(s.NameArabic)),
+			detail: fmt.Sprintf("%s · %d ayahs · %s", s.NameMeaning, s.AyahCount, m.mode.Word(s.NameArabic)),
 			value:  target,
 		})
 	}

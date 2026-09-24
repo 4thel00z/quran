@@ -64,6 +64,17 @@ func isolate(text string) string {
 	return isolationMark + text + isolationMark
 }
 
+// Divider separates the sidebar from the reader. Box-drawing characters are
+// bidi-neutral, so between an Arabic surah name and the reader's "2:255" a
+// bidi terminal reverses the whole span. U+01C0 LATIN LETTER DENTAL CLICK
+// looks like a bar but is a strong left-to-right letter, which stops that.
+func (m Mode) Divider() string {
+	if m == Native {
+		return "\u01C0"
+	}
+	return "│"
+}
+
 func (m Mode) Toggle() Mode {
 	if m == Visual {
 		return Native

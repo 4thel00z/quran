@@ -3,6 +3,7 @@ package render
 import (
 	"strings"
 	"testing"
+	"unicode"
 
 	"charm.land/lipgloss/v2"
 	"github.com/charmbracelet/x/ansi"
@@ -37,5 +38,20 @@ func TestVersionAtLeast(t *testing.T) {
 		if got := versionAtLeast(version, 3, 6); got != want {
 			t.Errorf("versionAtLeast(%q) = %v", version, got)
 		}
+	}
+}
+
+// A bidi terminal must see a strong left-to-right character between the
+// sidebar's Arabic names and the reader's ayah numbers.
+func TestNativeDividerIsLeftToRightLetter(t *testing.T) {
+	divider := Native.Divider()
+	if ansi.StringWidth(divider) != 1 {
+		t.Fatalf("divider %q is %d cells wide", divider, ansi.StringWidth(divider))
+	}
+	if !unicode.IsLetter([]rune(divider)[0]) {
+		t.Fatalf("divider %q is not a letter", divider)
+	}
+	if Visual.Divider() != "│" {
+		t.Fatalf("visual divider is %q", Visual.Divider())
 	}
 }

@@ -24,7 +24,7 @@ Twelve reciters, word-by-word highlighting, 35 translations, one static binary.
 - 🕌 **12 reciters**: Minshawi (murattal, mujawwad), Husary (murattal, muallim), Alafasy, AbdulBaset (murattal, mujawwad), Sudais, Shatri, Rifai, Shuraym and Tablawi. All of them have word timings.
 - 🌍 **35 translations** across 26 languages, including a transliteration and two Arabic tafsirs, embedded in the binary. Switch while reading.
 - 🔎 **One search box** for `2:255`, `2:255-257`, `juz 30`, `hizb 5`, `page 604`, `kahf`, `الكهف`, or any words in the translation or the Arabic text.
-- 🔤 **Readable Arabic in any terminal**: letters are shaped and reordered for terminals without bidi, and each run is wrapped in left-to-right marks for terminals that have it (iTerm2 3.6+, Terminal.app, Konsole, GNOME Terminal).
+- 🔤 **Readable Arabic in any terminal**: letters are shaped and reordered for terminals without bidi; terminals that have it (iTerm2 3.6+, Terminal.app, Konsole, GNOME Terminal) get logical text laid out so their own bidi cannot pull the sidebar or ayah numbers into the Arabic.
 - 📦 **No runtime dependencies**: pure Go, no cgo. Text and timings are compiled in; audio streams from [quran.host](https://quran.host) and is cached after the first play.
 
 ## Screenshots
