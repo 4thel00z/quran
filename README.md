@@ -65,6 +65,7 @@ quran read 1 -t de-bubenheim           # print Al-Fatihah with a translation
 quran search patience prayer           # every word must appear
 quran search الحي القيوم                 # Arabic queries ignore diacritics
 quran reciters && quran translations
+quran font install                     # install Amiri Quran & Scheherazade New
 ```
 
 <p align="center"><img src="docs/img/cli-help.png" alt="quran --help" width="900"></p>
@@ -87,6 +88,20 @@ quran reciters && quran translations
 | `--cache-dir` | `QURAN_CACHE_DIR` | the OS cache dir + `/quran` |
 
 If Arabic looks mirrored or its words are scrambled, your terminal applies bidi itself: use `--arabic native`. If its letters are unjoined or in the wrong order, use `--arabic visual`. Press `A` in the reader to toggle.
+
+### Fonts & Terminal Setup
+
+For optimal Quranic Arabic typography in your terminal, install the curated font bundle (**Amiri Quran** and **Scheherazade New**):
+
+```sh
+quran font install
+```
+
+To verify installed fonts and view terminal fallback configuration snippets for Kitty, WezTerm, Alacritty, Ghostty, and others:
+
+```sh
+quran font status
+```
 
 ## Keys
 
@@ -117,6 +132,7 @@ everyayah mirror
 | `internal/assets` | embedded text, translations and timings |
 | `internal/arabic` | contextual shaping, lam-alef ligatures, visual reordering |
 | `internal/render` | right-to-left line layout for both modes |
+| `internal/font` | Quran font bundle installer and terminal fallback guidance |
 | `internal/audio` | fetch + cache, playback through [beep](https://github.com/gopxl/beep) |
 | `internal/tui` | the [Bubble Tea](https://github.com/charmbracelet/bubbletea) reader |
 | `internal/cmd` | [Cobra](https://github.com/spf13/cobra) commands run through [Fang](https://github.com/charmbracelet/fang) |
