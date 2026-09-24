@@ -79,6 +79,7 @@ func newRoot() *cobra.Command {
 		newRecitersCommand(),
 		newTranslationsCommand(),
 		newMirrorCommand(cfg),
+		newFontCommand(),
 	)
 	return root
 }
