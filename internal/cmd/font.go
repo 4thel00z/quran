@@ -73,7 +73,7 @@ func newFontInstallCommand() *cobra.Command {
 				if !s.Installed {
 					state = "✗ Not installed"
 				}
-				fmt.Fprintf(out, "  %-18s [%s] (%s)\n", s.Font.Name, state, s.Path)
+				fmt.Fprintf(out, "  %-24s [%s] (%s)\n", s.Font.Name, state, s.Font.Style)
 			}
 
 			// Refresh cache
@@ -123,7 +123,7 @@ func newFontStatusCommand() *cobra.Command {
 				if !s.Installed {
 					state = "✗ Not installed"
 				}
-				fmt.Fprintf(out, "  %-18s [%s]\n    Path: %s\n    Info: %s\n", s.Font.Name, state, s.Path, s.Font.Description)
+				fmt.Fprintf(out, "  %-24s [%s] (%s)\n    Path: %s\n    Info: %s\n", s.Font.Name, state, s.Font.Style, s.Path, s.Font.Description)
 			}
 
 			fmt.Fprintln(out)

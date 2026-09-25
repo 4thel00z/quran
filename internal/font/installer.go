@@ -100,6 +100,7 @@ func downloadFont(ctx context.Context, client *http.Client, f Font, destPath str
 	if err != nil {
 		return err
 	}
+	req.Header.Set("User-Agent", "quran-tui/font-installer")
 
 	resp, err := client.Do(req)
 	if err != nil {

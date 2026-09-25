@@ -65,7 +65,7 @@ quran read 1 -t de-bubenheim           # print Al-Fatihah with a translation
 quran search patience prayer           # every word must appear
 quran search الحي القيوم                 # Arabic queries ignore diacritics
 quran reciters && quran translations
-quran font install                     # install Amiri Quran & Scheherazade New
+quran font install                     # install Quran fonts (Madani, Indo-Pak, Turkish)
 ```
 
 <p align="center"><img src="docs/img/cli-help.png" alt="quran --help" width="900"></p>
@@ -91,7 +91,12 @@ If Arabic looks mirrored or its words are scrambled, your terminal applies bidi 
 
 ### Fonts & Terminal Setup
 
-For optimal Quranic Arabic typography in your terminal, install the curated font bundle (**Amiri Quran** and **Scheherazade New**):
+For optimal Quranic Arabic typography in your terminal, install the curated font bundle covering classical Madani Naskh, Indo-Pak, and Turkish/Ottoman calligraphy:
+- **Amiri Quran** (Madani Naskh by Khaled Hosny)
+- **Scheherazade New** (Extended Arabic Naskh by SIL International)
+- **Al Qalam Quran Majeed** (Standard Indo-Pak Mushaf script)
+- **KFGQPC Nastaleeq** (South Asian Nastaleeq script from King Fahd Complex)
+- **Shaikh Hamdullah** (Ottoman calligraphic script from Turkish Diyanet)
 
 ```sh
 quran font install
