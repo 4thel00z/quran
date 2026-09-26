@@ -65,6 +65,7 @@ quran read 1 -t de-bubenheim           # print Al-Fatihah with a translation
 quran search patience prayer           # every word must appear
 quran search الحي القيوم                 # Arabic queries ignore diacritics
 quran reciters && quran translations
+quran font install                     # install Quran fonts (Madani, Indo-Pak, Turkish)
 ```
 
 <p align="center"><img src="docs/img/cli-help.png" alt="quran --help" width="900"></p>
@@ -88,11 +89,30 @@ quran reciters && quran translations
 
 If Arabic looks mirrored or its words are scrambled, your terminal applies bidi itself: use `--arabic native`. If its letters are unjoined or in the wrong order, use `--arabic visual`. Press `A` in the reader to toggle.
 
-## Keys
+### Fonts & Terminal Setup
+
+For optimal Quranic Arabic typography in your terminal, install the curated font bundle covering classical Madani Naskh, Indo-Pak, and Turkish/Ottoman calligraphy:
+- **Amiri Quran** (Madani Naskh by Khaled Hosny)
+- **Scheherazade New** (Extended Arabic Naskh by SIL International)
+- **Al Qalam Quran Majeed** (Standard Indo-Pak Mushaf script)
+- **KFGQPC Nastaleeq** (South Asian Nastaleeq script from King Fahd Complex)
+- **Shaikh Hamdullah** (Ottoman calligraphic script from Turkish Diyanet)
+
+```sh
+quran font install
+```
+
+To verify installed fonts and view terminal fallback configuration snippets for Kitty, WezTerm, Alacritty, Ghostty, and others:
+
+```sh
+quran font status
+```
+
+## Keys & Mouse
 
 | | Playback | | Navigation |
 |---|---|---|---|
-| `space` | play / pause | `j` `k` | next / previous ayah |
+| `space` | play / pause | `j` `k` / `wheel` | next / previous ayah |
 | `enter` | play the ayah under the cursor | `h` `l` | previous / next surah |
 | `n` `p` | next / previous ayah | `g` `G` | first / last ayah |
 | `s` | stop | `tab` | surah list |
@@ -100,6 +120,9 @@ If Arabic looks mirrored or its words are scrambled, your terminal applies bidi 
 | `r` | repeat: off · ayah · range | `R` `T` | reciter / translation |
 | `a` | autoplay | `t` `b` | toggle translation / sidebar |
 | `+` `-` | volume | `A` | Arabic: visual ↔ native |
+| `S` `,` | settings & preferences | `click` | select or play ayah / surah |
+
+Preferences changed in the reader or the settings menu (`S`) are saved to `~/.config/quran/config.json`.
 
 ## How it works
 
@@ -117,6 +140,8 @@ everyayah mirror
 | `internal/assets` | embedded text, translations and timings |
 | `internal/arabic` | contextual shaping, lam-alef ligatures, visual reordering |
 | `internal/render` | right-to-left line layout for both modes |
+| `internal/font` | Quran font bundle installer and terminal fallback guidance |
+| `internal/config` | persistent user preferences (`~/.config/quran/config.json`) |
 | `internal/audio` | fetch + cache, playback through [beep](https://github.com/gopxl/beep) |
 | `internal/tui` | the [Bubble Tea](https://github.com/charmbracelet/bubbletea) reader |
 | `internal/cmd` | [Cobra](https://github.com/spf13/cobra) commands run through [Fang](https://github.com/charmbracelet/fang) |

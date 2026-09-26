@@ -8,6 +8,7 @@ import (
 	"github.com/charmbracelet/fang"
 	"github.com/spf13/cobra"
 
+	"github.com/4thel00z/quran/internal/config"
 	"github.com/4thel00z/quran/internal/quran"
 	"github.com/4thel00z/quran/internal/render"
 )
@@ -27,6 +28,7 @@ type Config struct {
 	Translation string
 	CacheDir    string
 	Arabic      string
+	FileConfig  config.Config
 }
 
 func (c Config) reciter() (quran.Reciter, error) {
@@ -54,7 +56,24 @@ func defaultCacheDir() string {
 }
 
 func newRoot() *cobra.Command {
-	cfg := &Config{}
+	fileCfg, _ := config.Load()
+	cfg := &Config{
+		FileConfig: fileCfg,
+	}
+
+	reciterDefault := defaultReciter
+	if fileCfg.Reciter != "" {
+		reciterDefault = fileCfg.Reciter
+	}
+	transDefault := defaultTranslation
+	if fileCfg.Translation != "" {
+		transDefault = fileCfg.Translation
+	}
+	arabicDefault := string(render.Auto)
+	if fileCfg.Arabic != "" {
+		arabicDefault = fileCfg.Arabic
+	}
+
 	root := &cobra.Command{
 		Use:   "quran [surah | surah:ayah | juz N | page N]",
 		Short: "Read and listen to the Quran in your terminal",
@@ -68,9 +87,9 @@ func newRoot() *cobra.Command {
 	}
 	flags := root.PersistentFlags()
 	flags.StringVar(&cfg.BaseURL, "base-url", envOr("QURAN_BASE_URL", defaultBaseURL), "audio host ($QURAN_BASE_URL)")
-	flags.StringVarP(&cfg.Reciter, "reciter", "r", envOr("QURAN_RECITER", defaultReciter), "reciter slug ($QURAN_RECITER)")
-	flags.StringVarP(&cfg.Translation, "translation", "t", envOr("QURAN_TRANSLATION", defaultTranslation), "translation id ($QURAN_TRANSLATION)")
-	flags.StringVar(&cfg.Arabic, "arabic", envOr("QURAN_ARABIC", string(render.Auto)), "visual, native or auto ($QURAN_ARABIC)")
+	flags.StringVarP(&cfg.Reciter, "reciter", "r", envOr("QURAN_RECITER", reciterDefault), "reciter slug ($QURAN_RECITER)")
+	flags.StringVarP(&cfg.Translation, "translation", "t", envOr("QURAN_TRANSLATION", transDefault), "translation id ($QURAN_TRANSLATION)")
+	flags.StringVar(&cfg.Arabic, "arabic", envOr("QURAN_ARABIC", arabicDefault), "visual, native or auto ($QURAN_ARABIC)")
 	flags.StringVar(&cfg.CacheDir, "cache-dir", envOr("QURAN_CACHE_DIR", defaultCacheDir()), "ayah cache, empty disables ($QURAN_CACHE_DIR)")
 	root.AddCommand(
 		newPlayCommand(cfg),
@@ -79,6 +98,7 @@ func newRoot() *cobra.Command {
 		newRecitersCommand(),
 		newTranslationsCommand(),
 		newMirrorCommand(cfg),
+		newFontCommand(),
 	)
 	return root
 }

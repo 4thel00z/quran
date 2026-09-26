@@ -4,12 +4,14 @@ package tui
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	tea "charm.land/bubbletea/v2"
 
 	"github.com/4thel00z/quran/internal/assets"
 	"github.com/4thel00z/quran/internal/audio"
+	"github.com/4thel00z/quran/internal/config"
 	"github.com/4thel00z/quran/internal/quran"
 	"github.com/4thel00z/quran/internal/render"
 )
@@ -24,6 +26,7 @@ type Options struct {
 	Player      *audio.Player
 	Target      *quran.Target
 	Play        bool
+	Config      config.Config
 }
 
 type focus int
@@ -135,6 +138,26 @@ func New(opts Options) (*Model, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	showSidebar := true
+	if opts.Config.ShowSidebar != nil {
+		showSidebar = *opts.Config.ShowSidebar
+	}
+	showTranslate := true
+	if opts.Config.ShowTranslation != nil {
+		showTranslate = *opts.Config.ShowTranslation
+	}
+	if opts.Config.Volume != nil {
+		opts.Player.SetLevel(*opts.Config.Volume)
+	}
+	var rep repeatMode
+	switch opts.Config.Repeat {
+	case "ayah":
+		rep = repeatAyah
+	case "range":
+		rep = repeatRange
+	}
+
 	m := &Model{
 		book:          opts.Book,
 		reciter:       opts.Reciter,
@@ -148,8 +171,9 @@ func New(opts Options) (*Model, error) {
 		styles:        newStyles(true),
 		surah:         1,
 		blocks:        map[int][]string{},
-		showSidebar:   true,
-		showTranslate: true,
+		showSidebar:   showSidebar,
+		showTranslate: showTranslate,
+		repeat:        rep,
 		autoplay:      true,
 		play:          playback{word: -1},
 		start:         opts.Target,
@@ -221,6 +245,8 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, nil
 	case tea.MouseWheelMsg:
 		return m, m.onWheel(msg)
+	case tea.MouseClickMsg:
+		return m, m.onClick(msg)
 	case tea.KeyPressMsg:
 		if m.overlay != nil {
 			return m, m.onOverlayKey(msg)
@@ -231,6 +257,24 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m *Model) onWheel(msg tea.MouseWheelMsg) tea.Cmd {
+	if m.overlay != nil {
+		switch msg.Button {
+		case tea.MouseWheelUp:
+			m.overlay.move(-1)
+		case tea.MouseWheelDown:
+			m.overlay.move(1)
+		}
+		return nil
+	}
+	if m.sidebarVisible() && msg.X < sidebarWidth {
+		switch msg.Button {
+		case tea.MouseWheelUp:
+			m.moveSide(-3)
+		case tea.MouseWheelDown:
+			m.moveSide(3)
+		}
+		return nil
+	}
 	switch msg.Button {
 	case tea.MouseWheelUp:
 		m.moveCursor(-1)
@@ -238,6 +282,113 @@ func (m *Model) onWheel(msg tea.MouseWheelMsg) tea.Cmd {
 		m.moveCursor(1)
 	}
 	return nil
+}
+
+func (m *Model) onClick(msg tea.MouseClickMsg) tea.Cmd {
+	if msg.Button != tea.MouseLeft {
+		return nil
+	}
+
+	if m.showHelp {
+		m.showHelp = false
+		return nil
+	}
+
+	if m.overlay != nil {
+		boxWidth := min(84, m.readerWidth()-4)
+		left := m.width - m.readerWidth()
+		boxX := left + max(0, (m.readerWidth()-boxWidth)/2)
+
+		totalRows := 3 + min(len(m.overlay.items), pickerRows)
+		if len(m.overlay.items) > pickerRows {
+			totalRows++
+		}
+		boxHeight := totalRows + 2
+		boxY := max(0, (m.height-boxHeight)/3)
+
+		if msg.X < boxX || msg.X >= boxX+boxWidth || msg.Y < boxY || msg.Y >= boxY+boxHeight {
+			m.overlay = nil
+			return nil
+		}
+
+		itemRow := msg.Y - (boxY + 3)
+		visibleCount := min(len(m.overlay.items)-m.overlay.offset, pickerRows)
+		if itemRow >= 0 && itemRow < visibleCount {
+			clickedIdx := m.overlay.offset + itemRow
+			if clickedIdx == m.overlay.cursor {
+				item, ok := m.overlay.selected()
+				kind := m.overlay.kind
+				if kind != pickSettings {
+					m.overlay = nil
+				}
+				if ok {
+					return m.choose(kind, item)
+				}
+			} else {
+				m.overlay.cursor = clickedIdx
+			}
+		}
+		return nil
+	}
+
+	if m.sidebarVisible() && msg.X < sidebarWidth {
+		row := msg.Y - headerHeight
+		if row >= 0 && row < m.bodyHeight() {
+			surahIdx := m.sideOffset + row
+			if surahIdx >= 0 && surahIdx < quran.SurahCount {
+				m.sideCursor = surahIdx
+				m.openSurah(surahIdx + 1)
+				m.focus = focusSidebar
+			}
+		}
+		return nil
+	}
+
+	if msg.X >= (m.width - m.readerWidth()) {
+		row := msg.Y - headerHeight
+		if row >= 0 && row < m.bodyHeight() {
+			m.focus = focusReader
+			ayahIdx := m.ayahAtRow(row)
+			if ayahIdx >= 0 {
+				if ayahIdx == m.cursor {
+					m.clearRange()
+					return m.playKey(m.cursorKey())
+				}
+				m.setCursor(ayahIdx)
+			}
+		}
+		return nil
+	}
+
+	return nil
+}
+
+func (m *Model) ayahAtRow(row int) int {
+	if row < 0 || row >= m.bodyHeight() {
+		return -1
+	}
+	offset := m.scroll
+	currentLine := 0
+	for i := -1; i < m.book.Surah(m.surah).AyahCount; i++ {
+		block := m.block(i)
+		if offset >= len(block) {
+			offset -= len(block)
+			continue
+		}
+		visibleInBlock := len(block) - offset
+		offset = 0
+		if row >= currentLine && row < currentLine+visibleInBlock {
+			if i == -1 {
+				return 0
+			}
+			return i
+		}
+		currentLine += visibleInBlock
+		if currentLine >= m.bodyHeight() {
+			break
+		}
+	}
+	return -1
 }
 
 func (m *Model) onKey(msg tea.KeyPressMsg) tea.Cmd {
@@ -259,6 +410,7 @@ func (m *Model) onKey(msg tea.KeyPressMsg) tea.Cmd {
 		m.showSidebar = !m.showSidebar
 		m.focus = focusReader
 		m.invalidate()
+		m.saveConfig()
 	case "j", "down":
 		m.moveCursor(1)
 	case "k", "up":
@@ -291,28 +443,36 @@ func (m *Model) onKey(msg tea.KeyPressMsg) tea.Cmd {
 	case "r":
 		m.repeat = m.repeat.next()
 		m.notify(m.repeat.String())
+		m.saveConfig()
 	case "a":
 		m.autoplay = !m.autoplay
 		m.notify(onOff("autoplay", m.autoplay))
+		m.saveConfig()
 	case "t":
 		m.showTranslate = !m.showTranslate
 		m.invalidate()
+		m.saveConfig()
 	case "A":
 		m.mode = m.mode.Toggle()
 		m.invalidate()
 		m.notify("arabic: " + string(m.mode))
+		m.saveConfig()
 	case "+", "=":
 		m.player.SetLevel(m.player.Level() + 1)
 		m.notify(fmt.Sprintf("volume %d%%", m.player.Percent()))
+		m.saveConfig()
 	case "-", "_":
 		m.player.SetLevel(m.player.Level() - 1)
 		m.notify(fmt.Sprintf("volume %d%%", m.player.Percent()))
+		m.saveConfig()
 	case "/":
 		m.overlay = newPicker(pickSearch, "Search", "2:255 · juz 30 · hizb 5 · page 12 · kahf · text", m.searchItems)
 	case "R":
 		m.overlay = newPicker(pickReciter, "Reciter", "filter reciters", m.reciterItems)
 	case "T":
 		m.overlay = newPicker(pickTranslation, "Translation", "filter translations", m.translationItems)
+	case "S", ",":
+		m.overlay = newPicker(pickSettings, "Settings", "filter settings", m.settingsItems)
 	}
 	return nil
 }
@@ -350,11 +510,37 @@ func (m *Model) onOverlayKey(msg tea.KeyPressMsg) tea.Cmd {
 	case "enter":
 		item, ok := m.overlay.selected()
 		kind := m.overlay.kind
-		m.overlay = nil
+		if kind != pickSettings {
+			m.overlay = nil
+		}
 		if !ok {
 			return nil
 		}
 		return m.choose(kind, item)
+	case "left", "h", "-":
+		if m.overlay.kind == pickSettings {
+			item, ok := m.overlay.selected()
+			if ok && item.value == settingVolume {
+				m.player.SetLevel(m.player.Level() - 1)
+				m.saveConfig()
+				cur := m.overlay.cursor
+				m.overlay = newPicker(pickSettings, "Settings", "filter settings", m.settingsItems)
+				m.overlay.cursor = cur
+				return nil
+			}
+		}
+	case "right", "l", "+", "=":
+		if m.overlay.kind == pickSettings {
+			item, ok := m.overlay.selected()
+			if ok && item.value == settingVolume {
+				m.player.SetLevel(m.player.Level() + 1)
+				m.saveConfig()
+				cur := m.overlay.cursor
+				m.overlay = newPicker(pickSettings, "Settings", "filter settings", m.settingsItems)
+				m.overlay.cursor = cur
+				return nil
+			}
+		}
 	}
 	return m.overlay.update(msg)
 }
@@ -365,6 +551,49 @@ func (m *Model) choose(kind pickerKind, item pickerItem) tea.Cmd {
 		return m.setReciter(item.value.(string))
 	case pickTranslation:
 		m.setTranslation(item.value.(string))
+		return nil
+	case pickSettings:
+		id := item.value.(settingID)
+		switch id {
+		case settingReciter:
+			m.overlay = newPicker(pickReciter, "Reciter", "filter reciters", m.reciterItems)
+			return nil
+		case settingTranslation:
+			m.overlay = newPicker(pickTranslation, "Translation", "filter translations", m.translationItems)
+			return nil
+		case settingArabic:
+			m.mode = m.mode.Toggle()
+			m.invalidate()
+			m.saveConfig()
+		case settingSidebar:
+			m.showSidebar = !m.showSidebar
+			m.focus = focusReader
+			m.invalidate()
+			m.saveConfig()
+		case settingTranslate:
+			m.showTranslate = !m.showTranslate
+			m.invalidate()
+			m.saveConfig()
+		case settingRepeat:
+			m.repeat = m.repeat.next()
+			m.saveConfig()
+		case settingAutoplay:
+			m.autoplay = !m.autoplay
+			m.saveConfig()
+		case settingVolume:
+			lvl := m.player.Level() + 2
+			if lvl > 10 {
+				lvl = 0
+			}
+			m.player.SetLevel(lvl)
+			m.saveConfig()
+		}
+		cur := 0
+		if m.overlay != nil {
+			cur = m.overlay.cursor
+		}
+		m.overlay = newPicker(pickSettings, "Settings", "filter settings", m.settingsItems)
+		m.overlay.cursor = cur
 		return nil
 	}
 	target := item.value.(quran.Target)
@@ -645,6 +874,7 @@ func (m *Model) setReciter(slug string) tea.Cmd {
 	}
 	m.reciter, m.segments = r, segments
 	m.notify("reciter: " + r.Title())
+	m.saveConfig()
 	if !m.play.active {
 		return nil
 	}
@@ -666,6 +896,7 @@ func (m *Model) setTranslation(id string) {
 	m.showTranslate = true
 	m.invalidate()
 	m.notify("translation: " + t.Title())
+	m.saveConfig()
 }
 
 func (m *Model) notify(text string) {
@@ -685,4 +916,90 @@ func onOff(label string, on bool) string {
 		return label + " off"
 	}
 	return label + " on"
+}
+
+func onOffLabel(b bool) string {
+	if b {
+		return "On"
+	}
+	return "Off"
+}
+
+func (m *Model) saveConfig() {
+	showSide := m.showSidebar
+	showTrans := m.showTranslate
+	vol := m.player.Level()
+	repeatStr := "off"
+	switch m.repeat {
+	case repeatAyah:
+		repeatStr = "ayah"
+	case repeatRange:
+		repeatStr = "range"
+	}
+	cfg := config.Config{
+		Reciter:         m.reciter.Slug,
+		Translation:     m.translation.ID,
+		Arabic:          string(m.mode),
+		ShowSidebar:     &showSide,
+		ShowTranslation: &showTrans,
+		Repeat:          repeatStr,
+		Volume:          &vol,
+	}
+	_ = config.Save(cfg)
+}
+
+func (m *Model) settingsItems(query string) []pickerItem {
+	items := []pickerItem{
+		{
+			title:  "Reciter: " + m.reciter.Name,
+			detail: "enter to change",
+			value:  settingReciter,
+		},
+		{
+			title:  "Translation: " + m.translation.Name,
+			detail: "enter to change",
+			value:  settingTranslation,
+		},
+		{
+			title:  "Arabic Mode: " + string(m.mode),
+			detail: "enter to toggle (auto · visual · native)",
+			value:  settingArabic,
+		},
+		{
+			title:  "Sidebar: " + onOffLabel(m.showSidebar),
+			detail: "enter to toggle",
+			value:  settingSidebar,
+		},
+		{
+			title:  "Translation Text: " + onOffLabel(m.showTranslate),
+			detail: "enter to toggle",
+			value:  settingTranslate,
+		},
+		{
+			title:  "Repeat Mode: " + m.repeat.String(),
+			detail: "enter to cycle (off · ayah · range)",
+			value:  settingRepeat,
+		},
+		{
+			title:  "Autoplay: " + onOffLabel(m.autoplay),
+			detail: "enter to toggle",
+			value:  settingAutoplay,
+		},
+		{
+			title:  fmt.Sprintf("Volume: %d%%", m.player.Percent()),
+			detail: "left/right or enter to adjust",
+			value:  settingVolume,
+		},
+	}
+	if query == "" {
+		return items
+	}
+	var filtered []pickerItem
+	q := strings.ToLower(query)
+	for _, it := range items {
+		if strings.Contains(strings.ToLower(it.title), q) || strings.Contains(strings.ToLower(it.detail), q) {
+			filtered = append(filtered, it)
+		}
+	}
+	return filtered
 }
