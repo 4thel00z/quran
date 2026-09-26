@@ -107,31 +107,53 @@ func (m *Model) currentAyah() quran.Ayah {
 func (m *Model) sidebarView() string {
 	s := m.styles
 	rows := m.bodyHeight()
-	if m.focus != focusSidebar {
-		m.sideOffset = min(max(0, m.surah-1-rows/2), max(0, quran.SurahCount-rows))
-	}
 	lines := make([]string, 0, rows)
-	inner := sidebarWidth - 1
-	for i := m.sideOffset; i < min(quran.SurahCount, m.sideOffset+rows); i++ {
-		surah := m.book.Surahs[i]
-		number := fmt.Sprintf("%3d ", surah.Number)
-		name := m.mode.Word(surah.NameArabic)
-		english := ansi.Truncate(surah.NameEnglish, inner-len(number)-ansi.StringWidth(name)-2, "…")
-		gap := strings.Repeat(" ", max(1, inner-len(number)-ansi.StringWidth(english)-ansi.StringWidth(name)-1))
-		switch {
-		case m.focus == focusSidebar && i == m.sideCursor:
-			lines = append(lines, s.sideCursor.Width(inner).Render(number+english+gap+name))
-		case surah.Number == m.surah:
-			lines = append(lines, s.sideCurrent.Render(number+english)+gap+s.marker.Render(name))
-		default:
-			lines = append(lines, s.faint.Render(number)+s.sideItem.Render(english)+gap+s.sideArabic.Render(name))
+	inner := sidebarWidth
+
+	thumbHeight := max(1, rows*rows/quran.SurahCount)
+	maxOffset := max(1, quran.SurahCount-rows)
+	thumbStart := (m.sideOffset * (rows - thumbHeight)) / maxOffset
+	thumbEnd := min(rows, thumbStart+thumbHeight)
+
+	for idx := 0; idx < rows; idx++ {
+		i := m.sideOffset + idx
+		var content string
+		if i < quran.SurahCount {
+			surah := m.book.Surahs[i]
+			number := fmt.Sprintf("%3d ", surah.Number)
+			name := m.mode.Word(surah.NameArabic)
+			english := ansi.Truncate(surah.NameEnglish, inner-len(number)-ansi.StringWidth(name)-2, "…")
+			gap := strings.Repeat(" ", max(1, inner-len(number)-ansi.StringWidth(english)-ansi.StringWidth(name)-1))
+			switch {
+			case m.focus == focusSidebar && i == m.sideCursor:
+				content = s.sideCursor.Width(inner).Render(number + english + gap + name)
+			case surah.Number == m.surah:
+				content = s.sideCurrent.Render(number+english) + gap + s.marker.Render(name)
+			default:
+				content = s.faint.Render(number) + s.sideItem.Render(english) + gap + s.sideArabic.Render(name)
+			}
+			w := ansi.StringWidth(content)
+			if w < inner {
+				content += strings.Repeat(" ", inner-w)
+			}
+		} else {
+			content = strings.Repeat(" ", inner)
 		}
+
+		var border string
+		if idx >= thumbStart && idx < thumbEnd {
+			if m.mode == render.Native {
+				border = s.gutterCursor.Bold(true).Render("\u01C0")
+			} else {
+				border = s.gutterCursor.Render("┃")
+			}
+		} else {
+			border = s.faint.Render(m.mode.Divider())
+		}
+		lines = append(lines, content+border)
 	}
-	for len(lines) < rows {
-		lines = append(lines, "")
-	}
-	divider := lipgloss.Border{Right: m.mode.Divider()}
-	return s.sidebar.Border(divider, false, true, false, false).Width(sidebarWidth).Height(rows).Render(strings.Join(lines, "\n"))
+
+	return strings.Join(lines, "\n")
 }
 
 func (m *Model) readerView() string {
@@ -153,7 +175,47 @@ func (m *Model) readerView() string {
 	for len(lines) < rows {
 		lines = append(lines, "")
 	}
-	return lipgloss.NewStyle().Width(m.readerWidth()).PaddingLeft(1).Render(strings.Join(lines, "\n"))
+
+	totalLines := m.totalReaderLines()
+	rw := m.readerWidth()
+	showScroll := totalLines > rows
+	var thumbStart, thumbEnd int
+	if showScroll {
+		thumbHeight := max(1, rows*rows/totalLines)
+		maxScroll := max(1, totalLines-rows)
+		thumbStart = (m.scroll * (rows - thumbHeight)) / maxScroll
+		thumbEnd = min(rows, thumbStart+thumbHeight)
+	}
+
+	rendered := make([]string, rows)
+	contentWidth := max(20, rw-3)
+	fullWidth := max(20, rw-1)
+
+	for idx, line := range lines {
+		w := ansi.StringWidth(line)
+		var padded string
+		var scrollBar string
+		if showScroll {
+			if w < contentWidth {
+				padded = line + strings.Repeat(" ", contentWidth-w)
+			} else {
+				padded = ansi.Truncate(line, contentWidth, "")
+			}
+			if idx >= thumbStart && idx < thumbEnd {
+				scrollBar = " " + m.styles.gutterCursor.Render("┃")
+			} else {
+				scrollBar = " " + m.styles.faint.Render("│")
+			}
+		} else {
+			if w < fullWidth {
+				padded = line + strings.Repeat(" ", fullWidth-w)
+			} else {
+				padded = ansi.Truncate(line, fullWidth, "")
+			}
+		}
+		rendered[idx] = " " + padded + scrollBar
+	}
+	return strings.Join(rendered, "\n")
 }
 
 // ensureVisible scrolls so the cursor ayah is on screen.

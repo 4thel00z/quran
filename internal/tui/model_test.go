@@ -127,8 +127,8 @@ func TestMouseWheel(t *testing.T) {
 		Y:      10,
 		Button: tea.MouseWheelDown,
 	})
-	if m.sideCursor <= 1 && m.sideOffset == initialSideOffset {
-		// Side cursor or offset should have moved
+	if m.sideOffset != initialSideOffset+3 {
+		t.Errorf("expected sidebar offset to increase by 3, got %d from %d", m.sideOffset, initialSideOffset)
 	}
 }
 
@@ -163,15 +163,22 @@ func TestSettingsOverlay(t *testing.T) {
 	}
 
 	items := m.settingsItems("")
+	foundFont := false
 	foundArabic := false
 	foundVolume := false
 	for _, it := range items {
+		if strings.Contains(it.title, "Quran Font") {
+			foundFont = true
+		}
 		if strings.Contains(it.title, "Arabic Mode") {
 			foundArabic = true
 		}
 		if strings.Contains(it.title, "Volume") {
 			foundVolume = true
 		}
+	}
+	if !foundFont {
+		t.Errorf("expected settings to contain Quran Font")
 	}
 	if !foundArabic {
 		t.Errorf("expected settings to contain Arabic Mode")
@@ -180,7 +187,25 @@ func TestSettingsOverlay(t *testing.T) {
 		t.Errorf("expected settings to contain Volume")
 	}
 
-	// Press Esc to dismiss
+	// First item is Quran Font; press Enter to open pickFont
+	m.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
+	if m.overlay == nil || m.overlay.kind != pickFont {
+		t.Fatalf("expected font picker to open on enter, got %+v", m.overlay)
+	}
+
+	// Select Scheherazade New
+	fontList := m.fontItems("")
+	if len(fontList) < 5 {
+		t.Fatalf("expected at least 5 font items, got %d", len(fontList))
+	}
+	m.overlay.cursor = 1
+	m.Update(tea.KeyPressMsg{Code: tea.KeyEnter})
+	if m.fontName != "Scheherazade New" {
+		t.Errorf("expected fontName to be Scheherazade New, got %q", m.fontName)
+	}
+
+	// Open settings again and press Esc to dismiss
+	typeText(m, "S")
 	m.Update(tea.KeyPressMsg{Code: tea.KeyEscape})
 	if m.overlay != nil {
 		t.Errorf("expected overlay to be closed after Esc")

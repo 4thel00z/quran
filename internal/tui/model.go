@@ -12,6 +12,7 @@ import (
 	"github.com/4thel00z/quran/internal/assets"
 	"github.com/4thel00z/quran/internal/audio"
 	"github.com/4thel00z/quran/internal/config"
+	"github.com/4thel00z/quran/internal/font"
 	"github.com/4thel00z/quran/internal/quran"
 	"github.com/4thel00z/quran/internal/render"
 )
@@ -127,6 +128,8 @@ type Model struct {
 	failed  bool
 	start   *quran.Target
 	playNow bool
+
+	fontName string
 }
 
 func New(opts Options) (*Model, error) {
@@ -157,6 +160,10 @@ func New(opts Options) (*Model, error) {
 	case "range":
 		rep = repeatRange
 	}
+	fontName := "Amiri Quran"
+	if opts.Config.Font != "" {
+		fontName = opts.Config.Font
+	}
 
 	m := &Model{
 		book:          opts.Book,
@@ -178,6 +185,7 @@ func New(opts Options) (*Model, error) {
 		play:          playback{word: -1},
 		start:         opts.Target,
 		playNow:       opts.Play,
+		fontName:      fontName,
 	}
 	return m, nil
 }
@@ -207,6 +215,11 @@ type tickMsg struct{ id int }
 
 type prefetchedMsg struct{}
 
+type fontInstallMsg struct {
+	err   error
+	count int
+}
+
 const tickInterval = 50 * time.Millisecond
 
 func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -223,6 +236,13 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if m.scrollPending {
 			m.scrollPending = false
 			m.scrollToCursor()
+		}
+		return m, nil
+	case fontInstallMsg:
+		if msg.err != nil {
+			m.fail(fmt.Errorf("font install failed: %w", msg.err))
+		} else {
+			m.notify(fmt.Sprintf("✓ installed %d Quran fonts to system fonts", msg.count))
 		}
 		return m, nil
 	case audioMsg:
@@ -267,11 +287,13 @@ func (m *Model) onWheel(msg tea.MouseWheelMsg) tea.Cmd {
 		return nil
 	}
 	if m.sidebarVisible() && msg.X < sidebarWidth {
+		rows := max(1, m.bodyHeight())
+		maxOffset := max(0, quran.SurahCount-rows)
 		switch msg.Button {
 		case tea.MouseWheelUp:
-			m.moveSide(-3)
+			m.sideOffset = max(0, m.sideOffset-3)
 		case tea.MouseWheelDown:
-			m.moveSide(3)
+			m.sideOffset = min(maxOffset, m.sideOffset+3)
 		}
 		return nil
 	}
@@ -547,6 +569,26 @@ func (m *Model) onOverlayKey(msg tea.KeyPressMsg) tea.Cmd {
 
 func (m *Model) choose(kind pickerKind, item pickerItem) tea.Cmd {
 	switch kind {
+	case pickFont:
+		val := item.value.(string)
+		if val == "__install__" {
+			m.notify("installing fonts to system …")
+			return func() tea.Msg {
+				targetDir, err := font.TargetDir("")
+				if err != nil {
+					return fontInstallMsg{err: err}
+				}
+				if err := font.Install(context.Background(), targetDir, true, nil); err != nil {
+					return fontInstallMsg{err: err}
+				}
+				_, _ = font.RefreshCache(targetDir)
+				return fontInstallMsg{err: nil, count: 5}
+			}
+		}
+		m.fontName = val
+		m.saveConfig()
+		m.notify("font: " + val + " · configure terminal fallback")
+		return nil
 	case pickReciter:
 		return m.setReciter(item.value.(string))
 	case pickTranslation:
@@ -555,6 +597,9 @@ func (m *Model) choose(kind pickerKind, item pickerItem) tea.Cmd {
 	case pickSettings:
 		id := item.value.(settingID)
 		switch id {
+		case settingFont:
+			m.overlay = newPicker(pickFont, "Quran Fonts", "filter fonts · enter to select", m.fontItems)
+			return nil
 		case settingReciter:
 			m.overlay = newPicker(pickReciter, "Reciter", "filter reciters", m.reciterItems)
 			return nil
@@ -645,6 +690,40 @@ func (m *Model) setCursor(index int) {
 	m.ensureVisible()
 }
 
+func (m *Model) scrollLines(delta int) {
+	totalLines := m.totalReaderLines()
+	rows := m.bodyHeight()
+	maxScroll := max(0, totalLines-rows)
+	m.scroll = min(maxScroll, max(0, m.scroll+delta))
+
+	topAyah := m.ayahAtRow(0)
+	botAyah := m.ayahAtRow(rows - 1)
+	if topAyah >= 0 && m.cursor < topAyah {
+		m.setCursorSilent(topAyah)
+	} else if botAyah >= 0 && m.cursor > botAyah {
+		m.setCursorSilent(botAyah)
+	}
+}
+
+func (m *Model) setCursorSilent(index int) {
+	count := m.book.Surah(m.surah).AyahCount
+	index = min(count-1, max(0, index))
+	if index == m.cursor {
+		return
+	}
+	delete(m.blocks, m.cursor)
+	delete(m.blocks, index)
+	m.cursor = index
+}
+
+func (m *Model) totalReaderLines() int {
+	total := 0
+	for i := -1; i < m.book.Surah(m.surah).AyahCount; i++ {
+		total += len(m.block(i))
+	}
+	return total
+}
+
 func (m *Model) openSurah(number int) {
 	if number < 1 || number > quran.SurahCount {
 		return
@@ -656,7 +735,8 @@ func (m *Model) openSurah(number int) {
 	}
 	m.cursor = 0
 	m.sideCursor = number - 1
-	m.moveSide(0)
+	rows := max(1, m.bodyHeight())
+	m.sideOffset = min(max(0, number-1-rows/2), max(0, quran.SurahCount-rows))
 	m.ensureVisible()
 }
 
@@ -937,6 +1017,7 @@ func (m *Model) saveConfig() {
 		repeatStr = "range"
 	}
 	cfg := config.Config{
+		Font:            m.fontName,
 		Reciter:         m.reciter.Slug,
 		Translation:     m.translation.ID,
 		Arabic:          string(m.mode),
@@ -950,6 +1031,11 @@ func (m *Model) saveConfig() {
 
 func (m *Model) settingsItems(query string) []pickerItem {
 	items := []pickerItem{
+		{
+			title:  "Quran Font: " + m.fontName,
+			detail: "enter to select or install fonts",
+			value:  settingFont,
+		},
 		{
 			title:  "Reciter: " + m.reciter.Name,
 			detail: "enter to change",
@@ -991,6 +1077,51 @@ func (m *Model) settingsItems(query string) []pickerItem {
 			value:  settingVolume,
 		},
 	}
+	if query == "" {
+		return items
+	}
+	var filtered []pickerItem
+	q := strings.ToLower(query)
+	for _, it := range items {
+		if strings.Contains(strings.ToLower(it.title), q) || strings.Contains(strings.ToLower(it.detail), q) {
+			filtered = append(filtered, it)
+		}
+	}
+	return filtered
+}
+
+func (m *Model) fontItems(query string) []pickerItem {
+	fonts := font.RecommendedFonts()
+	targetDir, _ := font.TargetDir("")
+	statuses, _ := font.CheckStatus(targetDir)
+	statusMap := map[string]bool{}
+	for _, st := range statuses {
+		statusMap[st.Font.Name] = st.Installed
+	}
+
+	items := make([]pickerItem, 0, len(fonts)+1)
+	for _, f := range fonts {
+		installed := statusMap[f.Name]
+		statusLabel := "not installed"
+		if installed {
+			statusLabel = "installed"
+		}
+		if f.Name == m.fontName {
+			statusLabel += " · active"
+		}
+		items = append(items, pickerItem{
+			title:  f.Name,
+			detail: fmt.Sprintf("%s · %s · %s", f.Style, statusLabel, f.Description),
+			value:  f.Name,
+		})
+	}
+
+	items = append(items, pickerItem{
+		title:  "⬇ Install / Update All Fonts",
+		detail: "download and install all 5 Quran fonts to your system font directory",
+		value:  "__install__",
+	})
+
 	if query == "" {
 		return items
 	}

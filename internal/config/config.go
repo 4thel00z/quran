@@ -11,6 +11,7 @@ import (
 
 // Config represents persistent user preferences for quran-tui.
 type Config struct {
+	Font            string `json:"font,omitempty"`
 	Reciter         string `json:"reciter,omitempty"`
 	Translation     string `json:"translation,omitempty"`
 	Arabic          string `json:"arabic,omitempty"`

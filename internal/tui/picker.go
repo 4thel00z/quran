@@ -17,12 +17,14 @@ const (
 	pickReciter
 	pickTranslation
 	pickSettings
+	pickFont
 )
 
 type settingID int
 
 const (
-	settingReciter settingID = iota
+	settingFont settingID = iota
+	settingReciter
 	settingTranslation
 	settingArabic
 	settingSidebar

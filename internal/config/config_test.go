@@ -55,6 +55,7 @@ func TestSaveAndLoad(t *testing.T) {
 	showTranslation := false
 	vol := 8
 	original := Config{
+		Font:            "Amiri Quran",
 		Reciter:         "husary",
 		Translation:     "en-sahih",
 		Arabic:          "native",
@@ -73,6 +74,9 @@ func TestSaveAndLoad(t *testing.T) {
 		t.Fatalf("LoadFrom failed: %v", err)
 	}
 
+	if loaded.Font != original.Font {
+		t.Errorf("expected Font %q, got %q", original.Font, loaded.Font)
+	}
 	if loaded.Reciter != original.Reciter {
 		t.Errorf("expected Reciter %q, got %q", original.Reciter, loaded.Reciter)
 	}
