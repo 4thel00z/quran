@@ -16,6 +16,20 @@ const (
 	pickSearch pickerKind = iota
 	pickReciter
 	pickTranslation
+	pickSettings
+)
+
+type settingID int
+
+const (
+	settingReciter settingID = iota
+	settingTranslation
+	settingArabic
+	settingSidebar
+	settingTranslate
+	settingRepeat
+	settingAutoplay
+	settingVolume
 )
 
 type pickerItem struct {

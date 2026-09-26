@@ -11,13 +11,13 @@ import (
 
 // Config represents persistent user preferences for quran-tui.
 type Config struct {
-	Reciter         string   `json:"reciter,omitempty"`
-	Translation     string   `json:"translation,omitempty"`
-	Arabic          string   `json:"arabic,omitempty"`
-	ShowSidebar     *bool    `json:"show_sidebar,omitempty"`
-	ShowTranslation *bool    `json:"show_translation,omitempty"`
-	Repeat          string   `json:"repeat,omitempty"`
-	Volume          float64  `json:"volume,omitempty"`
+	Reciter         string `json:"reciter,omitempty"`
+	Translation     string `json:"translation,omitempty"`
+	Arabic          string `json:"arabic,omitempty"`
+	ShowSidebar     *bool  `json:"show_sidebar,omitempty"`
+	ShowTranslation *bool  `json:"show_translation,omitempty"`
+	Repeat          string `json:"repeat,omitempty"`
+	Volume          *int   `json:"volume,omitempty"`
 }
 
 // Path returns the path to the configuration file (~/.config/quran/config.json).

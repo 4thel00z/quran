@@ -378,7 +378,7 @@ func clock(d time.Duration) string {
 
 func (m *Model) statusLine() string {
 	s := m.styles
-	hints := s.faint.Render(" space play · enter play here · n/p next/prev · / search · R reciter · T translation · ? help · q quit")
+	hints := s.faint.Render(" space play · enter play here · n/p next/prev · / search · S settings · ? help · q quit")
 	if m.status == "" {
 		return ansi.Truncate(hints, m.width, "…")
 	}
@@ -404,6 +404,7 @@ var bindings = [][]binding{
 		{"r", "repeat: off · ayah · range"},
 		{"a", "autoplay next ayah"},
 		{"+ / -", "volume"},
+		{"S / ,", "settings & preferences"},
 	},
 	{
 		{"j / k", "next / previous ayah"},
@@ -414,6 +415,7 @@ var bindings = [][]binding{
 		{"R / T", "reciter / translation"},
 		{"t / b", "toggle translation / sidebar"},
 		{"A", "arabic: visual ↔ native"},
+		{"click", "select or play ayah / surah"},
 	},
 }
 

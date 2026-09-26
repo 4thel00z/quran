@@ -53,6 +53,7 @@ func TestSaveAndLoad(t *testing.T) {
 
 	showSidebar := true
 	showTranslation := false
+	vol := 8
 	original := Config{
 		Reciter:         "husary",
 		Translation:     "en-sahih",
@@ -60,7 +61,7 @@ func TestSaveAndLoad(t *testing.T) {
 		ShowSidebar:     &showSidebar,
 		ShowTranslation: &showTranslation,
 		Repeat:          "ayah",
-		Volume:          0.75,
+		Volume:          &vol,
 	}
 
 	if err := SaveTo(configFile, original); err != nil {
@@ -90,7 +91,7 @@ func TestSaveAndLoad(t *testing.T) {
 	if loaded.Repeat != "ayah" {
 		t.Errorf("expected Repeat ayah, got %q", loaded.Repeat)
 	}
-	if loaded.Volume != 0.75 {
-		t.Errorf("expected Volume 0.75, got %v", loaded.Volume)
+	if loaded.Volume == nil || *loaded.Volume != 8 {
+		t.Errorf("expected Volume 8, got %v", loaded.Volume)
 	}
 }

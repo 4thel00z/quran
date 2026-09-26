@@ -108,11 +108,11 @@ To verify installed fonts and view terminal fallback configuration snippets for 
 quran font status
 ```
 
-## Keys
+## Keys & Mouse
 
 | | Playback | | Navigation |
 |---|---|---|---|
-| `space` | play / pause | `j` `k` | next / previous ayah |
+| `space` | play / pause | `j` `k` / `wheel` | next / previous ayah |
 | `enter` | play the ayah under the cursor | `h` `l` | previous / next surah |
 | `n` `p` | next / previous ayah | `g` `G` | first / last ayah |
 | `s` | stop | `tab` | surah list |
@@ -120,6 +120,9 @@ quran font status
 | `r` | repeat: off · ayah · range | `R` `T` | reciter / translation |
 | `a` | autoplay | `t` `b` | toggle translation / sidebar |
 | `+` `-` | volume | `A` | Arabic: visual ↔ native |
+| `S` `,` | settings & preferences | `click` | select or play ayah / surah |
+
+Preferences changed in the reader or the settings menu (`S`) are saved to `~/.config/quran/config.json`.
 
 ## How it works
 
@@ -138,6 +141,7 @@ everyayah mirror
 | `internal/arabic` | contextual shaping, lam-alef ligatures, visual reordering |
 | `internal/render` | right-to-left line layout for both modes |
 | `internal/font` | Quran font bundle installer and terminal fallback guidance |
+| `internal/config` | persistent user preferences (`~/.config/quran/config.json`) |
 | `internal/audio` | fetch + cache, playback through [beep](https://github.com/gopxl/beep) |
 | `internal/tui` | the [Bubble Tea](https://github.com/charmbracelet/bubbletea) reader |
 | `internal/cmd` | [Cobra](https://github.com/spf13/cobra) commands run through [Fang](https://github.com/charmbracelet/fang) |

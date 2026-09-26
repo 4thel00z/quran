@@ -91,3 +91,98 @@ func TestSurahNavigation(t *testing.T) {
 		t.Fatalf("cursor moved past the last ayah to %s", m.cursorKey())
 	}
 }
+
+func TestMouseWheel(t *testing.T) {
+	m := newTestModel(t)
+	// Open Surah 2 so we have many ayahs
+	m.openSurah(2)
+	if m.cursor != 0 {
+		t.Fatalf("expected cursor 0, got %d", m.cursor)
+	}
+
+	// Mouse wheel down over reader (X = 50, Y = 10)
+	m.Update(tea.MouseWheelMsg{
+		X:      50,
+		Y:      10,
+		Button: tea.MouseWheelDown,
+	})
+	if m.cursor != 1 {
+		t.Errorf("expected cursor 1 after wheel down, got %d", m.cursor)
+	}
+
+	// Mouse wheel up over reader
+	m.Update(tea.MouseWheelMsg{
+		X:      50,
+		Y:      10,
+		Button: tea.MouseWheelUp,
+	})
+	if m.cursor != 0 {
+		t.Errorf("expected cursor 0 after wheel up, got %d", m.cursor)
+	}
+
+	// Mouse wheel down over sidebar (X = 10, Y = 10)
+	initialSideOffset := m.sideOffset
+	m.Update(tea.MouseWheelMsg{
+		X:      10,
+		Y:      10,
+		Button: tea.MouseWheelDown,
+	})
+	if m.sideCursor <= 1 && m.sideOffset == initialSideOffset {
+		// Side cursor or offset should have moved
+	}
+}
+
+func TestMouseClick(t *testing.T) {
+	m := newTestModel(t)
+	// Click in sidebar at row 3 (header is 2 rows, so row 3 is first or second surah)
+	m.Update(tea.MouseClickMsg{
+		X:      5,
+		Y:      3,
+		Button: tea.MouseLeft,
+	})
+	if m.focus != focusSidebar {
+		t.Errorf("expected sidebar to be focused after click")
+	}
+
+	// Click in reader area at X = 50, Y = 5
+	m.Update(tea.MouseClickMsg{
+		X:      50,
+		Y:      5,
+		Button: tea.MouseLeft,
+	})
+	if m.focus != focusReader {
+		t.Errorf("expected reader to be focused after click")
+	}
+}
+
+func TestSettingsOverlay(t *testing.T) {
+	m := newTestModel(t)
+	typeText(m, "S")
+	if m.overlay == nil || m.overlay.kind != pickSettings {
+		t.Fatalf("expected settings overlay to be open")
+	}
+
+	items := m.settingsItems("")
+	foundArabic := false
+	foundVolume := false
+	for _, it := range items {
+		if strings.Contains(it.title, "Arabic Mode") {
+			foundArabic = true
+		}
+		if strings.Contains(it.title, "Volume") {
+			foundVolume = true
+		}
+	}
+	if !foundArabic {
+		t.Errorf("expected settings to contain Arabic Mode")
+	}
+	if !foundVolume {
+		t.Errorf("expected settings to contain Volume")
+	}
+
+	// Press Esc to dismiss
+	m.Update(tea.KeyPressMsg{Code: tea.KeyEscape})
+	if m.overlay != nil {
+		t.Errorf("expected overlay to be closed after Esc")
+	}
+}

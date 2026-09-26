@@ -80,6 +80,7 @@ func startTUI(ctx context.Context, cfg Config, args []string, play bool) error {
 		Player:      audio.NewPlayer(),
 		Target:      target,
 		Play:        play && target != nil,
+		Config:      cfg.FileConfig,
 	})
 	if err != nil {
 		return err
